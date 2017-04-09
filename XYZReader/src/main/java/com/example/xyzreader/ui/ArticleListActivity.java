@@ -11,7 +11,11 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
+import android.support.v13.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.app.SharedElementCallback;
+import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
@@ -25,6 +29,7 @@ import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import com.example.xyzreader.R;
@@ -36,6 +41,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An activity representing a list of Articles. This activity has different presentations for
@@ -48,9 +55,13 @@ public class ArticleListActivity extends AppCompatActivity implements
 
     private static final String TAG = ArticleListActivity.class.toString();
     public static final String PRE_TRANSITION_POSITION = "pre_transition_position";
+    public static final String POST_TRANSITION_POSITION = "post_transition_position";
     private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
+    private Bundle mTmpReturnState;
+    private boolean mIsRefreshing = false;
+
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -58,13 +69,60 @@ public class ArticleListActivity extends AppCompatActivity implements
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
+    private final SharedElementCallback mCallback = new SharedElementCallback() {
+        @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+        @Override
+        public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
+                if (mTmpReturnState != null) {
+                    int prePosition = mTmpReturnState.getInt(PRE_TRANSITION_POSITION);
+                    int postPosition = mTmpReturnState.getInt(POST_TRANSITION_POSITION);
+                    if (prePosition != postPosition) {
+                        String updateTransitionName = getString(R.string.transition_picture) + postPosition;
+                        View newSharedElement = mRecyclerView.findViewWithTag(updateTransitionName);
+                        if (newSharedElement != null) {
+                            names.clear();
+                            names.add(updateTransitionName);
+                            sharedElements.clear();
+                            sharedElements.put(updateTransitionName, newSharedElement);
+                        }
+                    }
+
+                    mTmpReturnState = null;
+//                } else {
+//                    View image = findViewById(R.id.thumbnail);
+//                    if (image != null){
+//                        names.add(image.getTransitionName());
+//                        sharedElements.put(image.getTransitionName(),image);
+//                    }
+//                }
+//        }
+//    };
+
+                }else {
+                        // If mTmpReenterState is null, then the activity is exiting.
+                        View navigationBar = findViewById(android.R.id.navigationBarBackground);
+                        View statusBar = findViewById(android.R.id.statusBarBackground);
+                        if (navigationBar != null) {
+                            names.add(navigationBar.getTransitionName());
+                            sharedElements.put(navigationBar.getTransitionName(), navigationBar);
+                        }
+                        if (statusBar != null) {
+                            names.add(statusBar.getTransitionName());
+                            sharedElements.put(statusBar.getTransitionName(), statusBar);
+                        }
+                    }
+                }
+        };
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
+        setExitSharedElementCallback(mCallback);
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
-
 
         final View toolbarContainerView = findViewById(R.id.toolbar_container);
 
@@ -95,7 +153,27 @@ public class ArticleListActivity extends AppCompatActivity implements
         unregisterReceiver(mRefreshingReceiver);
     }
 
-    private boolean mIsRefreshing = false;
+    @Override
+    public void onActivityReenter(int resultCode, Intent data) {
+        super.onActivityReenter(resultCode, data);
+        mTmpReturnState = new Bundle(data.getExtras());
+        int prePosition = mTmpReturnState.getInt(PRE_TRANSITION_POSITION);
+        int postPosition = mTmpReturnState.getInt(POST_TRANSITION_POSITION);
+        if(prePosition != postPosition){
+            mRecyclerView.scrollToPosition(postPosition);
+        }
+        ActivityCompat.postponeEnterTransition(this);
+        mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
+                mRecyclerView.requestLayout();
+                ActivityCompat.startPostponedEnterTransition(ArticleListActivity.this);
+                return true;
+            }
+        });
+
+    }
 
     private BroadcastReceiver mRefreshingReceiver = new BroadcastReceiver() {
         @Override
@@ -157,19 +235,17 @@ public class ArticleListActivity extends AppCompatActivity implements
                     Intent intent = new Intent(Intent.ACTION_VIEW,
                             ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
                     intent.putExtra(PRE_TRANSITION_POSITION, mPosition);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                         Bundle bundle = ActivityOptionsCompat
                                 .makeSceneTransitionAnimation(
                                         ArticleListActivity.this,
                                         vh.thumbnailView,
-                                        getString(R.string.transition_picture) + String.valueOf(mPosition)).toBundle();
+                                        vh.thumbnailView.getTransitionName()).toBundle();
 
                         Log.d(TAG,"GET transition NameId: " + mPosition);
                         startActivity(intent, bundle);
                     } else {
-                        startActivity(new Intent(Intent.ACTION_VIEW,
-                                ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition()))));
+                        startActivity(intent);
                     }
                     }
             });
@@ -190,6 +266,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             mCursor.moveToPosition(position);
+            mPosition = position;
             holder.titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
             if (!publishedDate.before(START_OF_EPOCH.getTime())) {
@@ -208,16 +285,15 @@ public class ArticleListActivity extends AppCompatActivity implements
                         + mCursor.getString(ArticleLoader.Query.AUTHOR)));
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                holder.thumbnailView.setTransitionName(getString(R.string.transition_picture) + String.valueOf(position));
-            }
-
-            Log.d(TAG, "Setting Transition NameID: " + position);
             holder.thumbnailView.setImageUrl(
                     mCursor.getString(ArticleLoader.Query.THUMB_URL),
                     ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
             holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                holder.thumbnailView.setTransitionName(getString(R.string.transition_picture) + mPosition);
+                holder.thumbnailView.setTag(getString(R.string.transition_picture) + mPosition);
+            }
         }
 
         @Override
