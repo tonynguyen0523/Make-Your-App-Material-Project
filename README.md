@@ -6,6 +6,8 @@ In this project, you will redesign an app to follow the Material Design guidelin
 
 This project gives you an opportunity to improve an app’s design, a vital skill for building apps users will love. It also replicates a common developer task of updating and changing an app's design as new standards are released.
 
+[Rubric][2]
+
 ## What will I learn?
 Through this project, you will:
 - Understand the fundamentals of Android design.
@@ -13,4 +15,10 @@ Through this project, you will:
 - Separate an interface into surfaces.
 - Effectively use transitions and motion.
 
+## Preview:
+[GIF][3]
+
+
 [1]:https://github.com/udacity/xyz-reader-starter-code
+[2]:https://review.udacity.com/#!/rubrics/63/view
+[3]:https://media.giphy.com/media/JLny4CpPMI06c/giphy.gif
