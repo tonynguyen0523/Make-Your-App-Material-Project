@@ -1,6 +1,8 @@
 # Make Your App Material
 In this project, you will redesign an app to follow the Material Design guidelines and translate a set of static design mocks to a living and breathing app.
 [Starter Code][1].
+### Preview:
+[GIF][3]
 
 ## Why this project?
 
@@ -14,10 +16,6 @@ Through this project, you will:
 - Apply Material Design guidelines to an mobile application.
 - Separate an interface into surfaces.
 - Effectively use transitions and motion.
-
-## Preview:
-[GIF][3]
-
 
 [1]:https://github.com/udacity/xyz-reader-starter-code
 [2]:https://review.udacity.com/#!/rubrics/63/view
