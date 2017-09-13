@@ -13,8 +13,4 @@ Through this project, you will:
 - Separate an interface into surfaces.
 - Effectively use transitions and motion.
 
-## Preview:
-
-![home](https://media.giphy.com/media/JLny4CpPMI06c/giphy.gif)
-
 [1]:https://github.com/udacity/xyz-reader-starter-code
