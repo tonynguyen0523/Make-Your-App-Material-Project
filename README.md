@@ -1,8 +1,15 @@
 # Make Your App Material
 In this project, you will redesign an app to follow the Material Design guidelines and translate a set of static design mocks to a living and breathing app.
 [Starter Code][1].
+
 ### Preview:
 [GIF][3]
+
+## Installation
+Clone the GitHub repository.
+```
+$ git clone https://github.com/tonynguyen0523/Make-Your-App-Material-Project.git
+```
 
 ## Why this project?
 
